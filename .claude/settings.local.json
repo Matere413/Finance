@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_engram_engram__mem_save",
+      "Bash(uv --version)",
+      "Bash(uv sync *)",
+      "mcp__plugin_engram_engram__mem_search",
+      "mcp__plugin_engram_engram__mem_get_observation",
+      "Bash(uv run *)",
+      "Bash(python -m pytest tests/unit/shared/test_config.py -v)",
+      "Bash(python -m pytest tests/unit/shared/test_database.py -v)",
+      "Bash(where uv *)",
+      "Read(//usr/local/bin/**)",
+      "Bash(/c/Users/david/.local/bin/uv run *)",
+      "Bash(/c/Users/david/.local/bin/uv sync *)",
+      "Bash(/c/Users/david/.local/bin/uv add *)"
+    ]
+  }
+}
