@@ -3,7 +3,7 @@ name = "finance-app-backend"
 version = "0.1.0"
 requires-python = ">=3.10"
 dependencies = [
-    "fastapi>=0.115.0",
+    "fastapi[standard]>=0.115.0",
     "uvicorn[standard]>=0.30.0",
     "sqlalchemy>=2.0.0",
     "alembic>=1.13.0",
