@@ -11,7 +11,7 @@ from src.features.auth.model import RefreshToken, User
 from src.features.auth.repository import RefreshTokenRepository, UserRepository
 from src.features.auth.schemas import UserResponse
 from src.shared.config import settings
-from src.shared.exceptions import CredentialsException, UserAlreadyExistsException
+from src.shared.exceptions import CredentialsException, InactiveUserException, UserAlreadyExistsException
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -45,8 +45,9 @@ class AuthService:
         expire = datetime.now(timezone.utc) + timedelta(
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
+        now = datetime.now(timezone.utc)
         return jwt.encode(
-            {"sub": str(user_id), "exp": expire},
+            {"sub": str(user_id), "iat": now, "exp": expire},
             settings.SECRET_KEY,
             algorithm="HS256",
         )
@@ -56,10 +57,7 @@ class AuthService:
         if not user or not pwd_context.verify(password, user.hashed_password):
             raise CredentialsException
         if not user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Inactive user",
-            )
+            raise InactiveUserException
         access_token = self._create_access_token(user.id)
         raw_refresh = secrets.token_urlsafe(32)
         token_hash = hashlib.sha256(raw_refresh.encode()).hexdigest()
@@ -67,7 +65,7 @@ class AuthService:
             user_id=user.id,
             token_hash=token_hash,
             expires_at=datetime.now(timezone.utc)
-            + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+            + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES),
         )
         await self.token_repo.save(refresh_token)
         return access_token, raw_refresh
@@ -76,15 +74,23 @@ class AuthService:
     # T-024: logout
     # ------------------------------------------------------------------
 
-    async def logout(self, access_token: str) -> None:
+    async def logout(self, access_token: str, raw_refresh_token: str | None = None) -> None:
         try:
-            payload = jwt.decode(
-                access_token, settings.SECRET_KEY, algorithms=["HS256"]
-            )
-            user_id = uuid.UUID(payload["sub"])
+            jwt.decode(access_token, settings.SECRET_KEY, algorithms=["HS256"])
         except (JWTError, KeyError, ValueError):
             raise CredentialsException
-        await self.token_repo.revoke_all_for_user(user_id)
+        if raw_refresh_token is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token not found or already revoked",
+            )
+        token_hash = hashlib.sha256(raw_refresh_token.encode()).hexdigest()
+        found = await self.token_repo.revoke_by_hash(token_hash)
+        if not found:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token not found or already revoked",
+            )
 
     # ------------------------------------------------------------------
     # T-026: refresh (token rotation)
@@ -111,7 +117,7 @@ class AuthService:
             user_id=user.id,
             token_hash=new_hash,
             expires_at=datetime.now(timezone.utc)
-            + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+            + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES),
         )
         await self.token_repo.save(new_token)
         return self._create_access_token(user.id), new_raw

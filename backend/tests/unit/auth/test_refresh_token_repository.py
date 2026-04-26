@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 TEST_DB_URL = "sqlite+aiosqlite:///./test_refresh_token_repo.db"
 
 
-@pytest_asyncio.fixture(loop_scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def db_session():
     import os
     from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
@@ -132,6 +132,33 @@ class TestRefreshTokenRepository:
         token_b = await token_repo.get_by_hash("token-b")
         assert token_a is not None and token_a.revoked is True
         assert token_b is not None and token_b.revoked is True
+
+    @pytest.mark.asyncio
+    async def test_revoke_by_hash_returns_true_when_found(self, db_session):
+        """revoke_by_hash returns True and marks the token revoked when found and active."""
+        from src.features.auth.repository import UserRepository, RefreshTokenRepository
+
+        user_repo = UserRepository(db_session)
+        saved_user = await user_repo.save(_make_user())
+
+        token_repo = RefreshTokenRepository(db_session)
+        await token_repo.save(_make_token(saved_user.id, token_hash="specific-hash"))
+
+        result = await token_repo.revoke_by_hash("specific-hash")
+
+        assert result is True
+        found = await token_repo.get_by_hash("specific-hash")
+        assert found is not None and found.revoked is True
+
+    @pytest.mark.asyncio
+    async def test_revoke_by_hash_returns_false_when_not_found(self, db_session):
+        """revoke_by_hash returns False when hash does not exist in DB."""
+        from src.features.auth.repository import RefreshTokenRepository
+
+        token_repo = RefreshTokenRepository(db_session)
+        result = await token_repo.revoke_by_hash("nonexistent-hash")
+
+        assert result is False
 
     @pytest.mark.asyncio
     async def test_revoke_all_only_affects_target_user(self, db_session):

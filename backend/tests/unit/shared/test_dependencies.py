@@ -134,7 +134,8 @@ async def test_get_current_user_user_not_found():
 
 
 # ---------------------------------------------------------------------------
-# T-027-e: valid JWT but user.is_active=False → raises HTTPException 403
+# T-027-e: valid JWT but user.is_active=False → raises HTTPException 401
+# Spec: GET /me with valid token for inactive user returns 401 (not 403)
 # ---------------------------------------------------------------------------
 
 
@@ -155,4 +156,4 @@ async def test_get_current_user_inactive_user():
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(token=token, db=mock_db)
 
-    assert exc_info.value.status_code == 403
+    assert exc_info.value.status_code == 401

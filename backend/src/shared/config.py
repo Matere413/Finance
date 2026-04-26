@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     DATABASE_URL: str = "sqlite+aiosqlite:///./finance.db"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 1
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = 1440
     ENVIRONMENT: str = "dev"
 
 

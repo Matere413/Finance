@@ -1,5 +1,5 @@
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import AsyncClient, ASGITransport, Cookies
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 
@@ -32,5 +32,9 @@ async def test_db():
 async def client(test_db):
     from src.main import app
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        cookies=Cookies()
+    ) as ac:
         yield ac

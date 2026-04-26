@@ -51,6 +51,25 @@ async def test_logout_missing_auth_header(client):
     assert response.status_code == 401
 
 
+# W-5/W-6: logout without refresh cookie → 401
+@pytest.mark.asyncio
+async def test_logout_without_cookie_returns_401(client):
+    """W-6: logout with valid access token but no refresh cookie returns 401."""
+    # Register and get access token, but use a fresh client without cookie
+    await client.post(REGISTER_URL, json=VALID_USER)
+    login_resp = await client.post(LOGIN_URL, json=VALID_USER)
+    access_token = login_resp.json()["access_token"]
+
+    # Delete the cookie from client to simulate missing cookie
+    client.cookies.clear()
+
+    response = await client.post(
+        LOGOUT_URL,
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert response.status_code == 401
+
+
 # C-4: expired JWT → 401
 @pytest.mark.asyncio
 async def test_logout_expired_token(client):

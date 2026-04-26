@@ -52,6 +52,18 @@ async def test_login_nonexistent_email(client):
     assert response_unknown.json()["detail"] == wrong_pw_response.json()["detail"]
 
 
+# W-2: refresh_token cookie must carry Path=/auth
+@pytest.mark.asyncio
+async def test_login_cookie_has_correct_path(client):
+    response = await _register_and_login(client)
+    assert response.status_code == 200
+    set_cookie_header = response.headers.get("set-cookie", "")
+    assert "refresh_token" in set_cookie_header
+    assert "Path=/auth" in set_cookie_header, (
+        f"Expected 'Path=/auth' in Set-Cookie header, got: {set_cookie_header}"
+    )
+
+
 # B-4: inactive user → 403
 @pytest.mark.asyncio
 async def test_login_inactive_user(client, test_db):
@@ -68,3 +80,4 @@ async def test_login_inactive_user(client, test_db):
 
     response = await client.post(LOGIN_URL, json=VALID_USER)
     assert response.status_code == 403
+    assert response.json()["detail"] == "Account is inactive"

@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.shared.database import get_db
-from src.shared.dependencies import get_current_user
+from src.shared.dependencies import get_current_user, oauth2_scheme
 from src.features.auth.model import User
 from src.features.auth.repository import RefreshTokenRepository, UserRepository
 from src.features.auth.service import AuthService
@@ -53,6 +53,7 @@ async def login(
         samesite="strict",
         secure=False,
         max_age=86400,
+        path="/auth",
     )
     return TokenResponse(access_token=access_token)
 
@@ -64,13 +65,15 @@ async def login(
 
 @router.post("/logout")
 async def logout(
+    request: Request,
     response: Response,
+    token: str = Depends(oauth2_scheme),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    service: AuthService = Depends(get_auth_service),
 ):
-    token_repo = RefreshTokenRepository(db)
-    await token_repo.revoke_all_for_user(current_user.id)
-    response.delete_cookie("refresh_token")
+    raw_refresh = request.cookies.get("refresh_token")
+    await service.logout(access_token=token, raw_refresh_token=raw_refresh)
+    response.delete_cookie("refresh_token", path="/auth")
     return {"message": "logged out"}
 
 
@@ -97,7 +100,7 @@ async def refresh(
             status_code=exc.status_code,
             content={"detail": exc.detail},
         )
-        error_response.delete_cookie("refresh_token")
+        error_response.delete_cookie("refresh_token", path="/auth")
         return error_response
     resp = JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -110,6 +113,7 @@ async def refresh(
         samesite="strict",
         secure=False,
         max_age=86400,
+        path="/auth",
     )
     return resp
 

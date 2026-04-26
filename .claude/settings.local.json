@@ -15,7 +15,8 @@
       "Bash(/c/Users/david/.local/bin/uv sync *)",
       "Bash(/c/Users/david/.local/bin/uv add *)",
       "mcp__plugin_engram_engram__mem_update",
-      "Bash(SECRET_KEY=\"alembic-migration-key\" /c/Users/david/.local/bin/uv run alembic revision --autogenerate -m \"create users and refresh tokens tables\")"
+      "Bash(SECRET_KEY=\"alembic-migration-key\" /c/Users/david/.local/bin/uv run alembic revision --autogenerate -m \"create users and refresh tokens tables\")",
+      "mcp__plugin_engram_engram__mem_session_summary"
     ]
   }
 }

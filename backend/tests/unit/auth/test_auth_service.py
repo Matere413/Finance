@@ -31,6 +31,7 @@ def mock_token_repo():
     repo.save = AsyncMock(side_effect=lambda t: t)
     repo.get_by_hash = AsyncMock(return_value=None)
     repo.revoke_all_for_user = AsyncMock(return_value=None)
+    repo.revoke_by_hash = AsyncMock(return_value=True)
     return repo
 
 
@@ -101,6 +102,44 @@ def _make_refresh_token_record(
         expires_at=expires_at,
         revoked=revoked,
     )
+
+
+# ---------------------------------------------------------------------------
+# W-3 — _create_access_token must include iat claim
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_access_token_contains_iat_sub_exp(service):
+    """W-3: JWT payload must contain iat, sub, and exp claims."""
+    from jose import jwt
+    from src.shared.config import settings
+    import uuid as _uuid
+
+    user_id = _uuid.uuid4()
+    token = service._create_access_token(user_id)
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+
+    assert "iat" in payload, "iat claim is missing from access token"
+    assert "sub" in payload, "sub claim is missing from access token"
+    assert "exp" in payload, "exp claim is missing from access token"
+    assert payload["sub"] == str(user_id)
+
+
+@pytest.mark.asyncio
+async def test_access_token_iat_is_recent(service):
+    """W-3: iat must be a recent timestamp (within last 5 seconds)."""
+    from jose import jwt
+    from src.shared.config import settings
+    import uuid as _uuid
+    import time
+
+    before = int(time.time()) - 5
+    user_id = _uuid.uuid4()
+    token = service._create_access_token(user_id)
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+
+    assert payload["iat"] >= before, "iat is not a recent timestamp"
 
 
 # ---------------------------------------------------------------------------
@@ -255,21 +294,51 @@ async def test_login_saves_refresh_token_hash(service, mock_user_repo, mock_toke
 
 
 @pytest.mark.asyncio
-async def test_logout_revokes_all_user_tokens(service, mock_token_repo):
-    """C-1: valid access token causes revoke_all_for_user with correct user_id."""
+async def test_logout_revokes_specific_token(service, mock_token_repo):
+    """C-1 (W-5): logout with valid access+refresh tokens calls revoke_by_hash."""
+    user_id = uuid.uuid4()
+    token = _make_access_token(user_id)
+    raw_refresh = "some_raw_refresh_token"
+
+    import hashlib as _hashlib
+    expected_hash = _hashlib.sha256(raw_refresh.encode()).hexdigest()
+    mock_token_repo.revoke_by_hash = AsyncMock(return_value=True)
+
+    await service.logout(token, raw_refresh_token=raw_refresh)
+
+    mock_token_repo.revoke_by_hash.assert_called_once_with(expected_hash)
+
+
+@pytest.mark.asyncio
+async def test_logout_without_refresh_token_raises_401(service, mock_token_repo):
+    """W-6: logout with no refresh token raises 401."""
     user_id = uuid.uuid4()
     token = _make_access_token(user_id)
 
-    await service.logout(token)
+    with pytest.raises(HTTPException) as exc_info:
+        await service.logout(token, raw_refresh_token=None)
 
-    mock_token_repo.revoke_all_for_user.assert_called_once_with(user_id)
+    assert exc_info.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_logout_with_unknown_refresh_token_raises_401(service, mock_token_repo):
+    """W-5: logout with a refresh token not found in DB raises 401."""
+    user_id = uuid.uuid4()
+    token = _make_access_token(user_id)
+    mock_token_repo.revoke_by_hash = AsyncMock(return_value=False)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.logout(token, raw_refresh_token="unknown_token")
+
+    assert exc_info.value.status_code == 401
 
 
 @pytest.mark.asyncio
 async def test_logout_invalid_token_raises_401(service):
     """C-3: malformed token string raises 401."""
     with pytest.raises(HTTPException) as exc_info:
-        await service.logout("this.is.not.a.valid.jwt")
+        await service.logout("this.is.not.a.valid.jwt", raw_refresh_token="any_refresh")
 
     assert exc_info.value.status_code == 401
 
@@ -280,7 +349,7 @@ async def test_logout_expired_token_raises_401(service):
     expired_token = _make_access_token(uuid.uuid4(), expired=True)
 
     with pytest.raises(HTTPException) as exc_info:
-        await service.logout(expired_token)
+        await service.logout(expired_token, raw_refresh_token="any_refresh")
 
     assert exc_info.value.status_code == 401
 

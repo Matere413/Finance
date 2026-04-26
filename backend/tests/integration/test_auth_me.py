@@ -67,4 +67,4 @@ async def test_me_inactive_user(client, test_db):
     response = await client.get(
         ME_URL, headers={"Authorization": f"Bearer {token}"}
     )
-    assert response.status_code == 403
+    assert response.status_code == 401

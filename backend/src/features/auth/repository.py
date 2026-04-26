@@ -48,6 +48,21 @@ class RefreshTokenRepository:
             token.revoked = True
             await self.session.commit()
 
+    async def revoke_by_hash(self, token_hash: str) -> bool:
+        """Revoke a specific token by its hash. Returns True if found+revoked, False if not found."""
+        result = await self.session.execute(
+            select(RefreshToken).where(
+                RefreshToken.token_hash == token_hash,
+                RefreshToken.revoked == False,  # noqa: E712
+            )
+        )
+        token = result.scalar_one_or_none()
+        if token is None:
+            return False
+        token.revoked = True
+        await self.session.commit()
+        return True
+
     async def revoke_all_for_user(self, user_id: uuid.UUID) -> None:
         result = await self.session.execute(
             select(RefreshToken).where(

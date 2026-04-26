@@ -30,11 +30,19 @@ class TestSettings:
         s = Settings()
         assert s.ACCESS_TOKEN_EXPIRE_MINUTES == 15
 
-    def test_settings_refresh_token_expire_days_default(self):
-        """REFRESH_TOKEN_EXPIRE_DAYS defaults to 1."""
+    def test_settings_refresh_token_expire_minutes_default(self):
+        """REFRESH_TOKEN_EXPIRE_MINUTES defaults to 1440 (1 day in minutes)."""
         from src.shared.config import Settings
         s = Settings()
-        assert s.REFRESH_TOKEN_EXPIRE_DAYS == 1
+        assert s.REFRESH_TOKEN_EXPIRE_MINUTES == 1440
+
+    def test_settings_refresh_token_expire_days_removed(self):
+        """REFRESH_TOKEN_EXPIRE_DAYS must no longer exist on Settings."""
+        from src.shared.config import Settings
+        s = Settings()
+        assert not hasattr(s, "REFRESH_TOKEN_EXPIRE_DAYS"), (
+            "REFRESH_TOKEN_EXPIRE_DAYS was renamed to REFRESH_TOKEN_EXPIRE_MINUTES"
+        )
 
     def test_settings_environment_default(self):
         """ENVIRONMENT defaults to 'dev'."""

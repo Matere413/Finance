@@ -9,7 +9,7 @@ import uuid
 TEST_DB_URL = "sqlite+aiosqlite:///./test_user_repo.db"
 
 
-@pytest_asyncio.fixture(loop_scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def db_session():
     import os
     from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
