@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Matere · Finance — Print</title>
+<link rel="stylesheet" href="app.css">
+<style>
+  /* Print-ready: render every screen stacked, one per page */
+  html, body { overflow: visible !important; height: auto !important; }
+  body { background: var(--bg-0); }
+
+  .print-sheet {
+    width: 1440px;
+    min-height: 900px;
+    display: block;
+    page-break-after: always;
+    break-after: page;
+    page-break-inside: avoid;
+    position: relative;
+    overflow: hidden;
+  }
+  .print-sheet:last-child { page-break-after: auto; break-after: auto; }
+
+  /* In each sheet, the app-shell fills the sheet */
+  .print-sheet .app-shell {
+    height: 900px !important;
+    width: 1440px !important;
+    display: grid;
+    grid-template-columns: 240px 1fr;
+  }
+  .print-sheet .main {
+    overflow: hidden !important;
+  }
+  .print-sheet .auth { height: 900px; width: 1440px; }
+
+  /* Sheet label (only visible on screen, hidden in print) */
+  .sheet-label {
+    position: absolute;
+    top: 8px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Silkscreen', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--fg-muted);
+    background: var(--bg-0);
+    padding: 3px 10px;
+    border: 2px solid var(--border-2);
+    z-index: 1000;
+    text-transform: uppercase;
+  }
+
+  @media print {
+    .sheet-label { display: none; }
+    html, body { margin: 0; padding: 0; background: #1a0f08; }
+    @page {
+      size: 1440px 900px;
+      margin: 0;
+    }
+    .print-sheet {
+      margin: 0 !important;
+      box-shadow: none !important;
+    }
+    /* Force colors in print */
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+  }
+
+  /* Screen preview — space sheets apart */
+  @media screen {
+    body { padding: 24px; display: flex; flex-direction: column; gap: 24px; align-items: center;}
+    .print-sheet {
+      box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+      border: 1px solid var(--border-1);
+    }
+  }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="assets/icons.js"></script>
+<script src="data.js"></script>
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" src="pages.jsx"></script>
+<script type="text/babel" src="modals.jsx"></script>
+
+<script type="text/babel">
+const noop = () => {};
+
+const sheets = [
+  { label: '01 · Login', el: <PageLogin onEnter={noop}/> },
+  { label: '02 · Personal · Dashboard', ctx: 'personal', page: 'dashboard' },
+  { label: '03 · Personal · Transactions', ctx: 'personal', page: 'transactions' },
+  { label: '04 · Personal · Categories', ctx: 'personal', page: 'categories' },
+  { label: '05 · All Groups', ctx: 'personal', page: 'groups' },
+  { label: '06 · Casa Mendoza · Dashboard', ctx: 'casa', page: 'group-dashboard' },
+  { label: '07 · Casa Mendoza · Transactions', ctx: 'casa', page: 'group-transactions' },
+  { label: '08 · Casa Mendoza · Members', ctx: 'casa', page: 'group-members' },
+  { label: '09 · Profile · Settings', ctx: 'personal', page: 'profile' },
+  { label: '10 · Modal · New transaction', ctx: 'personal', page: 'dashboard', modal: 'newtx' },
+  { label: '11 · Modal · Invite member', ctx: 'casa', page: 'group-members', modal: 'invite' },
+];
+
+function Shell({ ctx, page, modal }) {
+  const isGroup = ctx !== 'personal';
+  const groupObj = isGroup ? FinData.groups.find(g => g.id === ctx) : null;
+  const txList = isGroup ? FinData.groupTx : FinData.personalTx;
+  const ctxLabel = isGroup ? groupObj.name : 'Personal';
+
+  const crumbs = [
+    'Matere · Fin',
+    isGroup ? groupObj.name : 'Personal',
+    {
+      'dashboard': 'Dashboard', 'transactions': 'Transactions', 'categories': 'Categories',
+      'groups': 'All groups', 'profile': 'Profile',
+      'group-dashboard': 'Dashboard', 'group-transactions': 'Transactions', 'group-members': 'Members',
+    }[page] || page,
+  ];
+
+  let pageEl = null;
+  switch (page) {
+    case 'dashboard': case 'group-dashboard':
+      pageEl = <PageDashboard txList={txList} privacy={false} isGroup={isGroup} ctxLabel={ctxLabel} onNewTx={noop}/>; break;
+    case 'transactions': case 'group-transactions':
+      pageEl = <PageTransactions txList={txList} privacy={false} isGroup={isGroup} onNewTx={noop}/>; break;
+    case 'categories': pageEl = <PageCategories onAdd={noop}/>; break;
+    case 'groups':     pageEl = <PageGroups onCreate={noop} setCtx={noop} setPage={noop}/>; break;
+    case 'group-members': pageEl = <PageMembers onInvite={noop}/>; break;
+    case 'profile':    pageEl = <PageProfile theme="dark" setTheme={noop}/>; break;
+  }
+
+  return (
+    <div className="app-shell">
+      <Sidebar ctx={ctx} setCtx={noop} page={page} setPage={noop}/>
+      <main className="main">
+        <Topbar crumbs={crumbs} theme="dark" setTheme={noop} privacy={false} setPrivacy={noop} onLogout={noop}/>
+        {pageEl}
+      </main>
+      {modal === 'newtx' && <NewTxModal isGroup={isGroup} onClose={noop} onSave={noop}/>}
+      {modal === 'invite' && <InviteModal onClose={noop} onSend={noop}/>}
+    </div>
+  );
+}
+
+function PrintApp() {
+  return (
+    <>
+      {sheets.map((s, i) => (
+        <section key={i} className="print-sheet">
+          <div className="sheet-label">{s.label}</div>
+          {s.el ? s.el : <Shell ctx={s.ctx} page={s.page} modal={s.modal}/>}
+        </section>
+      ))}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<PrintApp/>);
+
+// Auto-print once everything is ready
+(async () => {
+  try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch(e){}
+  await new Promise(r => setTimeout(r, 900));
+  window.print();
+})();
+</script>
+
+</body>
+</html>

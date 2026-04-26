@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Matere · Finance</title>
+<link rel="stylesheet" href="app.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="assets/icons.js"></script>
+<script src="data.js"></script>
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" src="pages.jsx"></script>
+<script type="text/babel" src="modals.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "density": "compact",
+  "numbers": "pixel",
+  "crt": "on",
+  "privacy": "on",
+  "lang": "en"
+}/*EDITMODE-END*/;
+
+function App() {
+  const [logged, setLogged] = useState(() => localStorage.getItem('mtr-fin-logged') === '1');
+  const [ctx, setCtx] = useState(() => localStorage.getItem('mtr-fin-ctx') || 'personal');
+  const [page, setPage] = useState(() => localStorage.getItem('mtr-fin-page') || 'dashboard');
+  const [theme, setTheme] = useState(() => localStorage.getItem('mtr-fin-theme') || 'dark');
+  const [tweaks, setTweaks] = useState(TWEAK_DEFAULTS);
+  const [showTweaks, setShowTweaks] = useState(false);
+  const [tweaksAvail, setTweaksAvail] = useState(false);
+  const [modal, setModal] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  useEffect(() => localStorage.setItem('mtr-fin-ctx', ctx), [ctx]);
+  useEffect(() => localStorage.setItem('mtr-fin-page', page), [page]);
+  useEffect(() => localStorage.setItem('mtr-fin-theme', theme), [theme]);
+  useEffect(() => localStorage.setItem('mtr-fin-logged', logged ? '1' : '0'), [logged]);
+
+  // Apply body classes from theme + tweaks
+  useEffect(() => {
+    const body = document.body;
+    body.classList.toggle('theme-paper', theme === 'paper');
+    body.classList.toggle('density-compact', tweaks.density === 'compact');
+    body.classList.toggle('crt-global', tweaks.crt === 'on');
+    body.style.setProperty('--font-display',
+      tweaks.numbers === 'mono' ? "'VT323', monospace" :
+      tweaks.numbers === 'geist' ? "'Geist', sans-serif" :
+      "'Pixelify Sans', monospace"
+    );
+  }, [theme, tweaks]);
+
+  // Edit mode (Tweaks) protocol
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.type === '__activate_edit_mode') setShowTweaks(true);
+      if (e.data?.type === '__deactivate_edit_mode') setShowTweaks(false);
+    };
+    window.addEventListener('message', handler);
+    setTweaksAvail(true);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
+  const setTweak = (k, v) => {
+    const next = { ...tweaks, [k]: v };
+    setTweaks(next);
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [k]: v } }, '*');
+  };
+
+  const privacy = tweaks.privacy === 'on';
+  const setPrivacy = (on) => setTweak('privacy', on ? 'on' : 'off');
+
+  const showToast = (msg) => { setToast(msg); };
+
+  if (!logged) {
+    return <PageLogin onEnter={() => setLogged(true)} />;
+  }
+
+  const isGroup = ctx !== 'personal';
+  const groupObj = FinData.groups.find(g => g.id === ctx);
+  const txList = isGroup ? FinData.groupTx : FinData.personalTx;
+  const ctxLabel = isGroup ? groupObj.name : 'Personal';
+
+  const crumbs = [
+    'Matere · Fin',
+    isGroup ? groupObj.name : 'Personal',
+    {
+      'dashboard': 'Dashboard',
+      'transactions': 'Transactions',
+      'categories': 'Categories',
+      'groups': 'All groups',
+      'profile': 'Profile',
+      'group-dashboard': 'Dashboard',
+      'group-transactions': 'Transactions',
+      'group-members': 'Members',
+    }[page] || page,
+  ];
+
+  let pageEl = null;
+  switch (page) {
+    case 'dashboard':
+    case 'group-dashboard':
+      pageEl = <PageDashboard txList={txList} privacy={privacy} isGroup={isGroup} ctxLabel={ctxLabel}
+        onNewTx={() => setModal('newtx')} />;
+      break;
+    case 'transactions':
+    case 'group-transactions':
+      pageEl = <PageTransactions txList={txList} privacy={privacy} isGroup={isGroup}
+        onNewTx={() => setModal('newtx')} />;
+      break;
+    case 'categories':
+      pageEl = <PageCategories onAdd={() => showToast('New category — not wired in this prototype')} />;
+      break;
+    case 'groups':
+      pageEl = <PageGroups onCreate={() => setModal('newgroup')} setCtx={setCtx} setPage={setPage}/>;
+      break;
+    case 'group-members':
+      pageEl = <PageMembers onInvite={() => setModal('invite')}/>;
+      break;
+    case 'profile':
+      pageEl = <PageProfile theme={theme} setTheme={setTheme}/>;
+      break;
+    default:
+      pageEl = <PageDashboard txList={txList} privacy={privacy} isGroup={isGroup} ctxLabel={ctxLabel} onNewTx={() => setModal('newtx')} />;
+  }
+
+  return (
+    <div className="app-shell">
+      <Sidebar ctx={ctx} setCtx={setCtx} page={page} setPage={setPage} />
+      <main className="main">
+        <Topbar crumbs={crumbs} theme={theme} setTheme={setTheme}
+                privacy={privacy} setPrivacy={setPrivacy}
+                onLogout={() => { setLogged(false); }}/>
+        {pageEl}
+      </main>
+
+      {modal === 'newtx' && <NewTxModal isGroup={isGroup} onClose={() => setModal(null)}
+        onSave={() => { setModal(null); showToast('Saved entry'); }}/>}
+      {modal === 'newgroup' && <NewGroupModal onClose={() => setModal(null)}
+        onSave={(n) => { setModal(null); showToast('Group "' + (n || 'New group') + '" created'); }}/>}
+      {modal === 'invite' && <InviteModal onClose={() => setModal(null)}
+        onSend={(e) => { setModal(null); showToast('Invitation sent to ' + (e || 'member')); }}/>}
+
+      {showTweaks && <TweaksPanel tweaks={tweaks} setTweak={setTweak} onClose={() => setShowTweaks(false)}/>}
+
+      {toast && <div className="toast-wrap"><Toast message={toast} onDone={() => setToast(null)}/></div>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+
+</body>
+</html>
