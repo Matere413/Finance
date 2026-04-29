@@ -11,4 +11,4 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "dev"
 
 
-settings = Settings(_env_file=None)  # allow override in tests
+settings = Settings()  # loads from .env file by default
