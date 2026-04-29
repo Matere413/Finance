@@ -85,20 +85,21 @@ export const LoginPage: React.FC = () => {
             Sign in to pick up where you left off.
           </p>
 
-          <div className="flex border-[2.5px] border-border-2">
-            <Link
-              to="/login"
-              className="flex-1 py-2.5 bg-accent text-paper font-pixel text-xs tracking-widest uppercase cursor-pointer text-center"
-            >
-              Log in
-            </Link>
-            <Link
-              to="/register"
-              className="flex-1 py-2.5 bg-bg-1 font-pixel text-xs tracking-widest uppercase text-fg-2 cursor-pointer text-center hover:text-fg-1"
-            >
-              Sign up
-            </Link>
-          </div>
+        {/* Auth mode switcher - matching handoff design */}
+        <div className="flex border-2 border-border-2 mb-4">
+          <Link
+            to="/login"
+            className="flex-1 py-3 bg-accent text-paper font-pixel text-xs tracking-widest uppercase cursor-pointer text-center border-r-2 border-border-2 hover:bg-accent-hover transition-colors"
+          >
+            Log in
+          </Link>
+          <Link
+            to="/register"
+            className="flex-1 py-3 bg-bg-1 font-pixel text-xs tracking-widest uppercase text-fg-2 cursor-pointer text-center hover:bg-bg-2 hover:text-fg-1 transition-colors"
+          >
+            Sign up
+          </Link>
+        </div>
 
           {error && (
             <div className="bg-danger/10 border-2 border-danger p-3 text-danger font-mono text-sm">
