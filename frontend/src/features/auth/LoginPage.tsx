@@ -4,6 +4,7 @@ import { Icon } from '@components/Icon';
 import { Input } from '@components/Input';
 import { Button } from '@components/Button';
 import { useAuthStore } from '@stores/authStore';
+import { useToastStore } from '@stores/toastStore';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@stores/authStore';
 import { useThemeStore } from '@stores/themeStore';
+import { LandingPage } from '@features/auth/LandingPage';
 import { LoginPage } from '@features/auth/LoginPage';
 import { RegisterPage } from '@features/auth/RegisterPage';
 import { DashboardPage } from '@features/dashboard/DashboardPage';
@@ -53,28 +54,46 @@ function App() {
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
 
   return (
-    <div className={`min-h-screen ${isAuthPage ? '' : 'app-shell'}`}>
+    <div className={`min-h-screen ${isAuthPage || !isAuthenticated ? '' : 'app-shell'}`}>
       <Routes>
+        {/* Public routes */}
+        <Route path="/" element={
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />
+        } />
         <Route path="/login" element={
-          isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
         } />
         <Route path="/register" element={
-          isAuthenticated ? <Navigate to="/" replace /> : <RegisterPage />
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <RegisterPage />
         } />
-        <Route path="/*" element={
+        
+        {/* Protected routes */}
+        <Route path="/dashboard" element={
           <ProtectedRoute>
-            <AppShell>
-              <Routes>
-                <Route path="/" element={<DashboardPage />} />
-                <Route path="/transactions" element={<TransactionsPage />} />
-                <Route path="/categories" element={<CategoriesPage />} />
-                <Route path="/groups" element={<GroupsPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </AppShell>
+            <AppShell><DashboardPage /></AppShell>
           </ProtectedRoute>
         } />
+        <Route path="/transactions" element={
+          <ProtectedRoute>
+            <AppShell><TransactionsPage /></AppShell>
+          </ProtectedRoute>
+        } />
+        <Route path="/categories" element={
+          <ProtectedRoute>
+            <AppShell><CategoriesPage /></AppShell>
+          </ProtectedRoute>
+        } />
+        <Route path="/groups" element={
+          <ProtectedRoute>
+            <AppShell><GroupsPage /></AppShell>
+          </ProtectedRoute>
+        } />
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <AppShell><ProfilePage /></AppShell>
+          </ProtectedRoute>
+        } />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
