@@ -56,9 +56,9 @@ function App() {
   return (
     <div className={`min-h-screen ${isAuthPage || !isAuthenticated ? '' : 'app-shell'}`}>
       <Routes>
-        {/* Public routes */}
+        {/* Public routes - redirect / to login when not authenticated */}
         <Route path="/" element={
-          isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
         } />
         <Route path="/login" element={
           isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
