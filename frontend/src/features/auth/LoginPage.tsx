@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Icon } from '@components/Icon';
 import { Input } from '@components/Input';
 import { Button } from '@components/Button';
 import { useAuthStore } from '@stores/authStore';
-import { useToastStore } from '@stores/toastStore';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -125,32 +123,21 @@ export const LoginPage: React.FC = () => {
             required
           />
 
-          <div className="flex justify-between font-mono text-sm text-fg-muted">
-            <label className="cursor-pointer flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={formData.rememberMe}
-                onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
-                className="accent-accent"
-              />
-              Remember me
-            </label>
-            <span className="text-accent cursor-pointer hover:text-accent-hover">
-              Forgot password?
-            </span>
-          </div>
+      <div className="flex items-center font-mono text-sm text-fg-muted">
+        <label className="cursor-pointer flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={formData.rememberMe}
+            onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
+            className="accent-accent"
+          />
+          Remember me
+        </label>
+      </div>
 
-          <Button type="submit" fullWidth disabled={isLoading} icon="arrow_right">
-            {isLoading ? 'Signing in...' : 'Sign in'}
-          </Button>
-
-          <div className="text-center font-pixel text-2xs tracking-widest text-fg-muted mt-2">
-            — OR —
-          </div>
-
-          <Button variant="ghost" fullWidth icon="github">
-            Continue with GitHub
-          </Button>
+      <Button type="submit" fullWidth disabled={isLoading}>
+        {isLoading ? 'Signing in...' : 'Sign in'}
+      </Button>
         </form>
       </div>
     </div>

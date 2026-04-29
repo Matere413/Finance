@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Icon } from '@components/Icon';
 import { Input } from '@components/Input';
 import { Button } from '@components/Button';
 import { useAuthStore } from '@stores/authStore';
@@ -153,17 +152,9 @@ export const RegisterPage: React.FC = () => {
             required
           />
 
-          <Button type="submit" fullWidth disabled={isLoading} icon="arrow_right">
-            {isLoading ? 'Creating account...' : 'Create account'}
-          </Button>
-
-          <div className="text-center font-pixel text-2xs tracking-widest text-fg-muted mt-2">
-            — OR —
-          </div>
-
-          <Button variant="ghost" fullWidth icon="github">
-            Continue with GitHub
-          </Button>
+      <Button type="submit" fullWidth disabled={isLoading}>
+        {isLoading ? 'Creating account...' : 'Create account'}
+      </Button>
         </form>
       </div>
     </div>
